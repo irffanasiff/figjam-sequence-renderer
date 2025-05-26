@@ -1,0 +1,12 @@
+sequenceDiagram
+    participant A as Alice
+    participant B as Bob
+
+    A->>B: Hello!
+    
+    rect rgb(240, 248, 255)
+        A->>B: Message inside rect
+        B-->>A: Response inside rect
+    end
+    
+    A->>B: Goodbye! 

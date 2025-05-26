@@ -1,0 +1,83 @@
+sequenceDiagram
+    participant User as 👤 User
+    participant App as 📱 Mobile App
+    participant API as 🌐 API Gateway
+    participant Auth as 🔐 Auth Service
+    participant DB as 🗄️ Database
+
+    %% Basic interaction
+    User->>App: Open app
+    App->>API: Request initial data
+
+    %% Authentication section
+    rect rgb(255, 245, 238)
+        Note over User, Auth: 🔐 Authentication Flow
+        API->>Auth: Validate session
+        Auth->>DB: Check user credentials
+        DB-->>Auth: User data
+        Auth-->>API: Authentication result
+    end
+
+    %% Conditional logic section
+    alt User is authenticated
+        API-->>App: Return user dashboard
+        App-->>User: Show personalized content
+    else User not authenticated
+        API-->>App: Return login prompt
+        App-->>User: Show login screen
+        
+        opt User chooses to login
+            User->>App: Enter credentials
+            App->>Auth: Login request
+            Auth->>DB: Validate credentials
+            DB-->>Auth: Validation result
+            Auth-->>App: Login response
+        end
+    end
+
+    %% Parallel processing section
+    par Fetch user data
+        API->>DB: Get user profile
+        DB-->>API: Profile data
+    and Fetch notifications
+        API->>DB: Get notifications
+        DB-->>API: Notification list
+    and Fetch settings
+        API->>DB: Get user settings
+        DB-->>API: Settings data
+    end
+
+    %% Loop section
+    loop Every 30 seconds
+        App->>API: Heartbeat request
+        API-->>App: Status OK
+    end
+
+    %% Critical section
+    critical Data synchronization
+        App->>API: Sync local changes
+        API->>DB: Update records
+        DB-->>API: Sync confirmation
+        API-->>App: Sync complete
+    option Network failure
+        App->>App: Queue changes locally
+        Note over App: Retry sync when online
+    end
+
+    %% Break condition
+    break when Network timeout
+        App->>User: Show offline mode
+    end
+
+    %% Final section with background color
+    rect rgb(240, 248, 255)
+        Note over User, DB: 📊 Analytics & Cleanup
+        API->>DB: Log user activity
+        API->>DB: Cleanup old sessions
+        DB-->>API: Cleanup complete
+    end
+
+    User->>App: Close app
+    App->>API: End session
+    API->>Auth: Logout user
+    Auth-->>API: Session ended 

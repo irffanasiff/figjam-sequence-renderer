@@ -1,0 +1,69 @@
+sequenceDiagram
+    participant User as 👤 User
+    participant App as 📱 App
+    participant API as 🌐 API
+    participant Auth as 🔐 Auth Service
+    participant DB as 🗄️ Database
+
+    User->>App: Open application
+    
+    rect rgb(255, 245, 238)
+        Note over User, Auth: 🔐 Authentication Section
+        App->>API: Check session
+        API->>Auth: Validate token
+        Auth->>DB: Lookup user
+        DB-->>Auth: User data
+        Auth-->>API: Valid session
+        API-->>App: User authenticated
+    end
+
+    alt User has valid session
+        App-->>User: Welcome back!
+        User->>App: Access dashboard
+        
+        opt Load user preferences
+            App->>API: Get preferences
+            API->>DB: Query settings
+            DB-->>API: User settings
+            API-->>App: Preferences loaded
+        end
+        
+        App-->>User: Dashboard ready
+    else Session expired
+        App-->>User: Please login
+        User->>App: Enter credentials
+        
+        loop Authentication attempts
+            App->>Auth: Validate credentials
+            Auth->>DB: Check password
+            
+            alt Credentials valid
+                DB-->>Auth: Success
+                Auth-->>App: Login successful
+            else Invalid credentials
+                DB-->>Auth: Failed
+                Auth-->>App: Login failed
+                App-->>User: Try again
+            end
+        end
+    end
+
+    critical Data synchronization
+        App->>API: Sync user data
+        API->>DB: Update records
+        DB-->>API: Sync complete
+        API-->>App: Data synchronized
+    end
+
+    par Background tasks
+        App->>API: Analytics event
+        API->>DB: Log activity
+    and
+        App->>API: Cache update
+        API->>DB: Refresh cache
+    end
+
+    User->>App: Logout
+    App->>Auth: End session
+    Auth-->>App: Session ended
+    App-->>User: Goodbye! 

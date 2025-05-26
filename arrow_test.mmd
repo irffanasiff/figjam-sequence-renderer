@@ -1,0 +1,30 @@
+sequenceDiagram
+    participant A as Alice
+    participant B as Bob
+    participant C as Charlie
+
+    %% Test different arrow types
+    Note over A, C: Testing Arrow Types & Directions
+
+    %% Sync arrows (->>)
+    A->>B: Sync message (solid arrow, filled head)
+    B->>C: Another sync message
+
+    %% Response arrows (-->>)
+    C-->>B: Response message (dashed arrow)
+    B-->>A: Response back (dashed arrow)
+
+    %% Async arrows (->)
+    A->B: Async message (simple arrow)
+    B->C: Another async message
+
+    %% Self messages
+    A->>A: Self sync message
+    B-->>B: Self response message
+    C->C: Self async message
+
+    %% Mixed flow
+    A->>B: Request data
+    B-->>A: Here's your data
+    A->C: Notify Charlie
+    C-->>A: Got it! 

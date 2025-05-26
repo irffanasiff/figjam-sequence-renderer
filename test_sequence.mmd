@@ -1,0 +1,143 @@
+sequenceDiagram
+    participant User as 👤 User
+    participant UI as 🖼️ UI Components<br/>(TurnView, ThoughtPillView)
+    participant VM as 🧠 ChatViewModel<br/>(ConversationVM)
+    participant EventQueue as ⚡ EventQueue<br/>(Actor)
+    participant WebSocket as 🔌 WebSocketClient<br/>(Socket.IO)
+    participant ChatAPI as 🌐 ChatAPI<br/>(HTTP)
+    participant Backend as 🖥️ Backend Server
+
+    %% === INITIAL CONNECTION & SESSION ===
+    Note over User, Backend: 🚀 Initial Connection & Session Setup
+    
+    User->>VM: Open chat / Navigate to conversation
+    VM->>WebSocket: connect(conversationId?)
+    WebSocket->>Backend: Socket.IO connect + auth params
+    Backend-->>WebSocket: 'connected' event
+    Backend-->>WebSocket: 'new_session_created' event
+    WebSocket->>EventQueue: ingest(EmittedMessage: session creation)
+    EventQueue->>EventQueue: Convert to DisplayableMessage
+    EventQueue-->>VM: threadPublisher (new thread)
+    VM-->>UI: Update with session info
+
+    %% === USER SENDS MESSAGE ===
+    Note over User, Backend: 💬 User Message Flow (WebSocket)
+    
+    User->>UI: Type message & send
+    UI->>VM: sendMessage(text, cashTags?)
+    VM->>VM: Create optimistic DisplayableMessage
+    VM->>EventQueue: ingest(optimisticMessage: .optimisticPending)
+    EventQueue-->>VM: threadPublisher (immediate UI update)
+    VM-->>UI: Show message as "Pending"
+    
+    VM->>WebSocket: sendQuery(text, conversationId, id, cashTags)
+    WebSocket->>Backend: emit('query', payload)
+    Backend-->>WebSocket: 'query_received' event (ACK)
+    WebSocket->>EventQueue: ingest(EmittedMessage: user echo, .confirmed)
+    EventQueue->>EventQueue: Update optimistic → confirmed
+    EventQueue-->>VM: threadPublisher (status update)
+    VM-->>UI: Show message as "Delivered"
+
+    %% === ASSISTANT THINKING PROCESS ===
+    Note over User, Backend: 🧠 Assistant Thinking Process (WebSocket Events)
+    
+    Backend-->>WebSocket: 'assistant' event (thoughtsContent, iteration 0)
+    WebSocket->>EventQueue: ingest(EmittedMessage: thought)
+    EventQueue->>EventQueue: Convert to DisplayableMessage(.assistantThought)
+    EventQueue-->>VM: threadPublisher + pillThoughtPublisher
+    VM-->>UI: Show ThoughtPillView "Thinking..."
+
+    Backend-->>WebSocket: 'assistant' event (thoughtsContent, iteration 1)
+    WebSocket->>EventQueue: ingest(EmittedMessage: thought update)
+    EventQueue-->>VM: threadPublisher + pillThoughtPublisher
+    VM-->>UI: Update ThoughtPillView with progress
+
+    %% === TOOL INTERACTIONS ===
+    Note over User, Backend: 🔧 Tool Usage Flow (WebSocket Events)
+    
+    Backend-->>WebSocket: 'assistant' event (toolUseContent)
+    WebSocket->>EventQueue: ingest(EmittedMessage: tool call)
+    EventQueue->>EventQueue: Convert to DisplayableMessage(.toolActivityLog)
+    EventQueue-->>VM: threadPublisher
+    VM-->>UI: Show ToolCardView "Calling check-token-balance..."
+
+    Backend-->>WebSocket: 'assistant' event (toolResultContent with actionType)
+    WebSocket->>EventQueue: ingest(EmittedMessage: tool result)
+    EventQueue->>EventQueue: Check hasActionType() → PayloadContainer
+    EventQueue->>EventQueue: Convert to DisplayableMessage(.richContentDisplay)
+    EventQueue-->>VM: threadPublisher
+    VM-->>UI: Show PayloadCardView (SwapActionView)
+
+    Backend-->>WebSocket: 'assistant' event (toolErrorContent)
+    WebSocket->>EventQueue: ingest(EmittedMessage: tool error)
+    EventQueue->>EventQueue: Convert to DisplayableMessage(.toolActivityLog, .failed)
+    EventQueue-->>VM: threadPublisher
+    VM-->>UI: Show error in ToolCardView
+
+    %% === REASONING RECAP ===
+    Note over User, Backend: 📝 Reasoning Recap (WebSocket Events)
+    
+    Backend-->>WebSocket: 'assistant' event (reasoningRecapContent)
+    WebSocket->>EventQueue: ingest(EmittedMessage: recap)
+    EventQueue->>EventQueue: Convert to DisplayableMessage(.reasoningRecapMessage)
+    EventQueue-->>VM: threadPublisher
+    VM-->>UI: Show "Thought for 7.51s" summary
+
+    %% === FINAL ASSISTANT RESPONSE ===
+    Note over User, Backend: 💬 Final Assistant Response (WebSocket Events)
+    
+    Backend-->>WebSocket: 'assistant' event (textContent)
+    WebSocket->>EventQueue: ingest(EmittedMessage: final text)
+    EventQueue->>EventQueue: Convert to DisplayableMessage(.assistantTextMessage)
+    EventQueue-->>VM: threadPublisher
+    VM-->>UI: Show AITextResponseView with final answer
+
+    %% === CONVERSATION HISTORY (HTTP API) ===
+    Note over User, Backend: 📚 Conversation History Flow (HTTP API)
+    
+    User->>UI: Open conversation history
+    UI->>VM: Load conversation
+    VM->>ChatAPI: fetchMessages(conversationId)
+    ChatAPI->>Backend: GET /api/conversation/{id}/messages
+    Backend-->>ChatAPI: ChatSessionDetail (message graph)
+    ChatAPI->>ChatAPI: linearizedEvents() - Parse message tree
+    ChatAPI-->>VM: [EmittedMessage] (sorted timeline)
+    
+    VM->>EventQueue: Batch ingest historical messages
+    EventQueue->>EventQueue: Process each EmittedMessage → DisplayableMessage
+    EventQueue-->>VM: threadPublisher (complete conversation)
+    VM-->>UI: Render full conversation with all components
+
+    %% === CONVERSATION LIST (HTTP API) ===
+    Note over User, Backend: 📋 Conversation List Flow (HTTP API)
+    
+    User->>UI: View conversations
+    UI->>VM: Load conversations
+    VM->>ChatAPI: fetchConversationSummaries()
+    ChatAPI->>Backend: GET /api/conversations
+    Backend-->>ChatAPI: [ConversationSummary]
+    ChatAPI-->>VM: Conversation list
+    VM-->>UI: Show conversation list
+
+    %% === ERROR HANDLING ===
+    Note over User, Backend: ❌ Error Handling Flows
+    
+    Backend-->>WebSocket: 'error_occurred' event
+    WebSocket->>EventQueue: ingest(EmittedMessage: error)
+    EventQueue->>EventQueue: Convert to DisplayableMessage(.failed)
+    EventQueue-->>VM: threadPublisher
+    VM-->>UI: Show error state with "Try again"
+
+    %% === UI INTERACTIONS ===
+    Note over User, Backend: 🖱️ User Interactions with Generated Content
+    
+    User->>UI: Tap ThoughtPillView
+    UI->>UI: Show thought timeline modal
+    
+    User->>UI: Tap SwapActionView "Execute"
+    UI->>VM: Execute transaction
+    VM->>VM: Handle transaction execution
+    
+    User->>UI: Retry failed message
+    UI->>VM: retryMessage(messageId)
+    VM->>WebSocket: sendQuery(...) [retry flow]

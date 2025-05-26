@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Mermaid Sequence Renderer</title>
+    <style>
+      /* Figma Design System Variables */
+      :root {
+        /* Figma Colors */
+        --figma-color-bg: #ffffff;
+        --figma-color-bg-secondary: #f7f8fa;
+        --figma-color-bg-tertiary: #f1f2f4;
+        --figma-color-border: #e6e7eb;
+        --figma-color-border-strong: #d9dadd;
+        --figma-color-text: #1e1e1e;
+        --figma-color-text-secondary: #6c6c6c;
+        --figma-color-text-tertiary: #b3b3b3;
+        --figma-color-text-disabled: #b3b3b3;
+        --figma-color-accent: #18a0fb;
+        --figma-color-accent-hover: #0c8ce9;
+        --figma-color-accent-pressed: #0676d4;
+        --figma-color-success: #14ae5c;
+        --figma-color-success-secondary: #e8f5ee;
+        --figma-color-warning: #ffcd29;
+        --figma-color-warning-secondary: #fef7d3;
+        --figma-color-danger: #f24822;
+        --figma-color-danger-secondary: #ffeae6;
+
+        /* Figma Typography */
+        --figma-font-family: 'Inter', -apple-system, BlinkMacSystemFont,
+          'Segoe UI', system-ui, sans-serif;
+        --figma-font-size-11: 11px;
+        --figma-font-size-12: 12px;
+        --figma-font-size-14: 14px;
+        --figma-font-size-16: 16px;
+        --figma-font-weight-400: 400;
+        --figma-font-weight-500: 500;
+        --figma-font-weight-600: 600;
+
+        /* Figma Spacing (8px grid) */
+        --figma-space-4: 4px;
+        --figma-space-8: 8px;
+        --figma-space-12: 12px;
+        --figma-space-16: 16px;
+        --figma-space-20: 20px;
+        --figma-space-24: 24px;
+        --figma-space-32: 32px;
+
+        /* Figma Border Radius */
+        --figma-radius-2: 2px;
+        --figma-radius-4: 4px;
+        --figma-radius-6: 6px;
+        --figma-radius-8: 8px;
+
+        /* Figma Shadows */
+        --figma-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+        --figma-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: var(--figma-font-family);
+        margin: 0;
+        padding: var(--figma-space-16);
+        background: var(--figma-color-bg);
+        color: var(--figma-color-text);
+        font-size: var(--figma-font-size-12);
+        line-height: 1.4;
+        min-height: 100vh;
+        box-sizing: border-box;
+        overflow-x: hidden;
+      }
+
+      .container {
+        max-width: 400px;
+        display: flex;
+        flex-direction: column;
+        gap: var(--figma-space-16);
+        min-height: fit-content;
+        height: auto;
+      }
+
+      /* Header */
+      .header {
+        display: flex;
+        align-items: center;
+        gap: var(--figma-space-8);
+        padding-bottom: var(--figma-space-8);
+        border-bottom: 1px solid var(--figma-color-border);
+      }
+
+      .header-icon {
+        width: 24px;
+        height: 24px;
+        background: var(--figma-color-bg);
+        border-radius: var(--figma-radius-4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border: 1px solid var(--figma-color-border);
+        transition: all 0.2s ease;
+        cursor: default;
+      }
+
+      .header-icon:hover {
+        border-color: var(--figma-color-border-strong);
+        background: var(--figma-color-bg-secondary);
+      }
+
+      .header-logo {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+        object-position: center;
+        transition: opacity 0.2s ease;
+      }
+
+      .header-title {
+        margin: 0;
+        font-size: var(--figma-font-size-14);
+        font-weight: var(--figma-font-weight-600);
+        color: var(--figma-color-text);
+      }
+
+      /* Form Elements */
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: var(--figma-space-8);
+      }
+
+      .label {
+        font-size: var(--figma-font-size-11);
+        font-weight: var(--figma-font-weight-500);
+        color: var(--figma-color-text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .textarea {
+        width: 100%;
+        min-height: 160px;
+        max-height: 300px;
+        padding: var(--figma-space-12);
+        border: 1px solid var(--figma-color-border);
+        border-radius: var(--figma-radius-6);
+        font-family: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+        font-size: var(--figma-font-size-11);
+        line-height: 1.5;
+        resize: vertical;
+        background: var(--figma-color-bg);
+        color: var(--figma-color-text);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .textarea:focus {
+        outline: none;
+        border-color: var(--figma-color-accent);
+        box-shadow: 0 0 0 1px var(--figma-color-accent);
+      }
+
+      .textarea::placeholder {
+        color: var(--figma-color-text-tertiary);
+      }
+
+      /* Buttons */
+      .button-group {
+        display: flex;
+        gap: var(--figma-space-8);
+      }
+
+      .button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--figma-space-4);
+        padding: var(--figma-space-12) var(--figma-space-16);
+        border: 1px solid transparent;
+        border-radius: var(--figma-radius-6);
+        font-family: var(--figma-font-family);
+        font-size: var(--figma-font-size-12);
+        font-weight: var(--figma-font-weight-500);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        white-space: nowrap;
+        min-height: 36px;
+      }
+
+      .button-primary {
+        background: var(--figma-color-accent);
+        color: white;
+        flex: 1;
+      }
+
+      .button-primary:hover:not(:disabled) {
+        background: var(--figma-color-accent-hover);
+      }
+
+      .button-primary:active:not(:disabled) {
+        background: var(--figma-color-accent-pressed);
+      }
+
+      .button-primary:disabled {
+        background: var(--figma-color-text-disabled);
+        cursor: not-allowed;
+      }
+
+      .button-secondary {
+        background: var(--figma-color-bg);
+        color: var(--figma-color-text);
+        border-color: var(--figma-color-border);
+        min-width: 80px;
+      }
+
+      .button-secondary:hover:not(:disabled) {
+        background: var(--figma-color-bg-secondary);
+        border-color: var(--figma-color-border-strong);
+      }
+
+      .button-secondary:active:not(:disabled) {
+        background: var(--figma-color-bg-tertiary);
+      }
+
+      .button-small {
+        padding: var(--figma-space-4) var(--figma-space-8);
+        font-size: var(--figma-font-size-11);
+        min-height: 24px;
+        min-width: auto;
+      }
+
+      /* Messages */
+      .message {
+        display: none;
+        padding: var(--figma-space-12);
+        border-radius: var(--figma-radius-6);
+        font-size: var(--figma-font-size-11);
+        font-weight: var(--figma-font-weight-500);
+        border: 1px solid;
+      }
+
+      .message-error {
+        background: var(--figma-color-danger-secondary);
+        border-color: var(--figma-color-danger);
+        color: var(--figma-color-danger);
+      }
+
+      .message-success {
+        background: var(--figma-color-success-secondary);
+        border-color: var(--figma-color-success);
+        color: var(--figma-color-success);
+      }
+
+      .message-warning {
+        background: var(--figma-color-warning-secondary);
+        border-color: var(--figma-color-warning);
+        color: #8b6914;
+      }
+
+      /* Debug Panel */
+      .debug-panel {
+        background: var(--figma-color-bg-secondary);
+        border: 1px solid var(--figma-color-border);
+        border-radius: var(--figma-radius-8);
+        overflow: hidden;
+        min-height: auto;
+      }
+
+      .debug-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--figma-space-12) var(--figma-space-16);
+        background: var(--figma-color-bg);
+        border-bottom: 1px solid var(--figma-color-border);
+      }
+
+      .debug-header-left {
+        display: flex;
+        align-items: center;
+        gap: var(--figma-space-12);
+      }
+
+      .debug-header-right {
+        display: flex;
+        align-items: center;
+        gap: var(--figma-space-8);
+      }
+
+      .debug-title {
+        font-size: var(--figma-font-size-11);
+        font-weight: var(--figma-font-weight-600);
+        color: var(--figma-color-text);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      /* Toggle Switch */
+      .toggle-switch {
+        position: relative;
+        width: 40px;
+        height: 20px;
+        background: var(--figma-color-border-strong);
+        border-radius: 10px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+      }
+
+      .toggle-switch.active {
+        background: var(--figma-color-accent);
+      }
+
+      .toggle-switch::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 16px;
+        height: 16px;
+        background: white;
+        border-radius: 50%;
+        transition: left 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      }
+
+      .toggle-switch.active::after {
+        left: 22px;
+      }
+
+      .debug-clear {
+        background: none;
+        border: none;
+        color: var(--figma-color-text-secondary);
+        font-size: var(--figma-font-size-11);
+        cursor: pointer;
+        padding: var(--figma-space-4);
+        border-radius: var(--figma-radius-4);
+        transition: color 0.2s ease, background 0.2s ease;
+      }
+
+      .debug-clear:hover {
+        color: var(--figma-color-text);
+        background: var(--figma-color-bg-tertiary);
+      }
+
+      .debug-logs {
+        max-height: 180px;
+        overflow-y: auto;
+        padding: var(--figma-space-8);
+        display: none;
+        transition: all 0.2s ease;
+      }
+
+      .debug-logs.visible {
+        display: block;
+      }
+
+      .debug-logs.hidden {
+        display: none;
+      }
+
+      /* When logs are hidden, hide the border */
+      .debug-panel.logs-hidden .debug-header {
+        border-bottom: none;
+      }
+
+      /* Copy notification */
+      .copy-notification {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: var(--figma-color-text);
+        color: white;
+        padding: var(--figma-space-8) var(--figma-space-12);
+        border-radius: var(--figma-radius-4);
+        font-size: var(--figma-font-size-11);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+        z-index: 1000;
+      }
+
+      .copy-notification.show {
+        opacity: 1;
+      }
+
+      .log-entry {
+        font-family: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+        font-size: var(--figma-font-size-11);
+        line-height: 1.4;
+        margin-bottom: var(--figma-space-4);
+        padding: var(--figma-space-4) var(--figma-space-8);
+        border-radius: var(--figma-radius-4);
+        word-break: break-all;
+      }
+
+      .log-debug {
+        background: var(--figma-color-bg-tertiary);
+        color: var(--figma-color-text-secondary);
+      }
+      .log-info {
+        background: #e3f2fd;
+        color: var(--figma-color-accent);
+      }
+      .log-warn {
+        background: var(--figma-color-warning-secondary);
+        color: #8b6914;
+      }
+      .log-error {
+        background: var(--figma-color-danger-secondary);
+        color: var(--figma-color-danger);
+      }
+
+      /* Loading state */
+      .loading {
+        opacity: 0.6;
+        pointer-events: none;
+      }
+
+      /* Scrollbars */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: var(--figma-color-bg-secondary);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: var(--figma-color-border-strong);
+        border-radius: var(--figma-radius-4);
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--figma-color-text-tertiary);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="header-icon">
+          <img src="logo.png" alt="Mermaid Logo" class="header-logo" />
+        </div>
+        <h1 class="header-title">Mermaid Sequence Renderer</h1>
+      </div>
+
+      <div class="form-group">
+        <label class="label" for="mermaid-input">Sequence Diagram Code</label>
+        <textarea
+          id="mermaid-input"
+          class="textarea"
+          placeholder="Enter your Mermaid sequence diagram code here..."
+        >
+sequenceDiagram
+    participant A as Alice
+    participant B as Bob
+    participant C as Charlie
+    
+    A->>B: Hello Bob!
+    B->>C: Hello Charlie!
+    C-->>B: Hi Bob!
+    B-->>A: Hi Alice!</textarea
+        >
+      </div>
+
+      <div class="message message-error" id="error-message"></div>
+      <div class="message message-success" id="success-message"></div>
+      <div class="message message-warning" id="info-message"></div>
+
+      <div class="button-group">
+        <button class="button button-secondary" id="clear-btn">Clear</button>
+        <button class="button button-primary" id="render-btn">
+          Render Diagram
+        </button>
+      </div>
+
+      <div class="debug-panel">
+        <div class="debug-header">
+          <div class="debug-header-left">
+            <div class="debug-title">Debug Logs</div>
+            <div class="toggle-switch" id="debug-toggle"></div>
+          </div>
+          <div class="debug-header-right">
+            <button class="debug-clear button-small" id="copy-logs-btn">
+              Copy
+            </button>
+            <button class="debug-clear button-small" id="clear-logs-btn">
+              Clear
+            </button>
+          </div>
+        </div>
+        <div class="debug-logs" id="logs-container"></div>
+      </div>
+
+      <!-- Copy notification -->
+      <div class="copy-notification" id="copy-notification">
+        Logs copied to clipboard!
+      </div>
+    </div>
+
+    <script>
+      const renderBtn = document.getElementById('render-btn');
+      const clearBtn = document.getElementById('clear-btn');
+      const clearLogsBtn = document.getElementById('clear-logs-btn');
+      const copyLogsBtn = document.getElementById('copy-logs-btn');
+      const debugToggle = document.getElementById('debug-toggle');
+      const copyNotification = document.getElementById('copy-notification');
+      const input = document.getElementById('mermaid-input');
+      const errorMessage = document.getElementById('error-message');
+      const successMessage = document.getElementById('success-message');
+      const infoMessage = document.getElementById('info-message');
+      const logsContainer = document.getElementById('logs-container');
+
+      // Debug logs visibility state
+      let debugLogsVisible = false;
+
+      function showMessage(element, message) {
+        element.textContent = message;
+        element.style.display = 'block';
+        setTimeout(() => {
+          element.style.display = 'none';
+        }, 5000);
+      }
+
+      function hideMessages() {
+        errorMessage.style.display = 'none';
+        successMessage.style.display = 'none';
+        infoMessage.style.display = 'none';
+      }
+
+      function addLog(level, message, data = null) {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = document.createElement('div');
+        logEntry.className = `log-entry log-${level}`;
+
+        let logText = `[${timestamp}] ${level.toUpperCase()}: ${message}`;
+        if (data) {
+          logText += `\n${JSON.stringify(data, null, 2)}`;
+        }
+
+        logEntry.textContent = logText;
+        logsContainer.appendChild(logEntry);
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+
+        // Keep only last 50 log entries
+        while (logsContainer.children.length > 50) {
+          logsContainer.removeChild(logsContainer.firstChild);
+        }
+      }
+
+      function clearLogs() {
+        logsContainer.innerHTML = '';
+      }
+
+      function setLoadingState(loading) {
+        document.body.classList.toggle('loading', loading);
+        renderBtn.disabled = loading;
+        renderBtn.textContent = loading ? 'Rendering...' : 'Render Diagram';
+      }
+
+      function toggleDebugLogs() {
+        debugLogsVisible = !debugLogsVisible;
+        const debugPanel = document.querySelector('.debug-panel');
+
+        if (debugLogsVisible) {
+          logsContainer.classList.remove('hidden');
+          logsContainer.classList.add('visible');
+          debugPanel.classList.remove('logs-hidden');
+        } else {
+          logsContainer.classList.remove('visible');
+          logsContainer.classList.add('hidden');
+          debugPanel.classList.add('logs-hidden');
+        }
+
+        debugToggle.classList.toggle('active', debugLogsVisible);
+        addLog('debug', `Debug logs ${debugLogsVisible ? 'shown' : 'hidden'}`);
+      }
+
+      function initializeDebugState() {
+        const debugPanel = document.querySelector('.debug-panel');
+        if (!debugLogsVisible) {
+          logsContainer.classList.add('hidden');
+          debugPanel.classList.add('logs-hidden');
+        }
+        debugToggle.classList.toggle('active', debugLogsVisible);
+      }
+
+      async function copyLogsToClipboard() {
+        try {
+          const logEntries = Array.from(logsContainer.children);
+          const logText = logEntries
+            .map((entry) => entry.textContent)
+            .join('\n');
+
+          if (logText.trim() === '') {
+            addLog('warn', 'No logs to copy');
+            return;
+          }
+
+          await navigator.clipboard.writeText(logText);
+
+          // Show copy notification
+          copyNotification.classList.add('show');
+          setTimeout(() => {
+            copyNotification.classList.remove('show');
+          }, 2000);
+
+          addLog('info', 'Logs copied to clipboard');
+        } catch (error) {
+          addLog('error', 'Failed to copy logs to clipboard', {
+            error: error.message,
+          });
+
+          // Fallback: create a text area and select text
+          const logEntries = Array.from(logsContainer.children);
+          const logText = logEntries
+            .map((entry) => entry.textContent)
+            .join('\n');
+
+          const textArea = document.createElement('textarea');
+          textArea.value = logText;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+
+          copyNotification.classList.add('show');
+          setTimeout(() => {
+            copyNotification.classList.remove('show');
+          }, 2000);
+        }
+      }
+
+      // Initialize debug state
+      initializeDebugState();
+
+      // Handle logo loading error
+      const logoImg = document.querySelector('.header-logo');
+      if (logoImg) {
+        logoImg.addEventListener('error', function () {
+          // Fallback to text icon if logo fails to load
+          const headerIcon = document.querySelector('.header-icon');
+          headerIcon.innerHTML = '◊';
+          headerIcon.style.background = 'var(--figma-color-accent)';
+          headerIcon.style.color = 'white';
+          headerIcon.style.fontSize = 'var(--figma-font-size-11)';
+          headerIcon.style.fontWeight = 'var(--figma-font-weight-600)';
+          headerIcon.style.border = 'none';
+          addLog('warn', 'Logo failed to load, using fallback icon');
+        });
+
+        logoImg.addEventListener('load', function () {
+          addLog('debug', 'Logo loaded successfully');
+        });
+      }
+
+      // Initialize logging
+      addLog('info', 'Plugin UI initialized');
+
+      // Event Listeners
+      renderBtn.addEventListener('click', () => {
+        hideMessages();
+        const mermaidCode = input.value.trim();
+
+        addLog('debug', 'Render button clicked');
+        addLog('debug', 'Mermaid code length', { length: mermaidCode.length });
+
+        if (!mermaidCode) {
+          const errorMsg = 'Please enter some Mermaid code';
+          showMessage(errorMessage, errorMsg);
+          addLog('warn', errorMsg);
+          return;
+        }
+
+        setLoadingState(true);
+        addLog('info', 'Sending render request to plugin');
+
+        parent.postMessage(
+          {
+            pluginMessage: {
+              type: 'render-sequence',
+              mermaidCode: mermaidCode,
+            },
+          },
+          '*'
+        );
+      });
+
+      clearBtn.addEventListener('click', () => {
+        input.value = '';
+        hideMessages();
+        addLog('debug', 'Input cleared');
+      });
+
+      clearLogsBtn.addEventListener('click', () => {
+        clearLogs();
+        addLog('info', 'Logs cleared');
+      });
+
+      copyLogsBtn.addEventListener('click', () => {
+        copyLogsToClipboard();
+      });
+
+      debugToggle.addEventListener('click', () => {
+        toggleDebugLogs();
+      });
+
+      // Listen for messages from the plugin
+      window.addEventListener('message', (event) => {
+        const { type, message, data } = event.data.pluginMessage || {};
+
+        addLog('debug', 'Received message from plugin', { type, message });
+
+        setLoadingState(false);
+
+        if (type === 'error') {
+          showMessage(errorMessage, message);
+          addLog('error', message, data);
+        } else if (type === 'success') {
+          showMessage(successMessage, message);
+          addLog('info', message, data);
+        } else if (type === 'info') {
+          showMessage(infoMessage, message);
+          addLog('info', message, data);
+        } else if (type === 'debug') {
+          addLog('debug', message, data);
+        }
+      });
+
+      // Log any JavaScript errors
+      window.addEventListener('error', (event) => {
+        addLog('error', 'JavaScript error in UI', {
+          message: event.message,
+          filename: event.filename,
+          lineno: event.lineno,
+          colno: event.colno,
+        });
+      });
+
+      addLog('info', 'Event listeners attached');
+    </script>
+  </body>
+</html>

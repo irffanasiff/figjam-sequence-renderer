@@ -1,0 +1,25 @@
+sequenceDiagram
+    participant Alice
+    participant Bob
+    participant Charlie
+
+    Alice->>Bob: Hello Bob!
+    
+    rect rgb(255, 255, 230)
+        Note over Alice, Bob: This is a simple rectangular section
+        Bob->>Charlie: Forward message
+        Charlie-->>Bob: Response
+    end
+    
+    alt Bob is available
+        Bob-->>Alice: I'm here!
+    else Bob is busy
+        Bob-->>Alice: I'm busy, try later
+    end
+    
+    opt Alice wants to continue
+        Alice->>Bob: Are you sure?
+        Bob-->>Alice: Yes, I'm sure
+    end
+    
+    Alice->>Bob: Thanks! 
