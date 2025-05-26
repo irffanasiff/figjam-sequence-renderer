@@ -1,4 +1,4 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This repository contains a simple Next.js frontend and the source for a Figma plugin used to render Mermaid sequence diagrams. The Next.js portion was generated using [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
 
@@ -19,6 +19,16 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Figma Plugin
+
+The `code.ts` file contains a Figma plugin that reads Mermaid sequence diagram syntax and renders the diagram directly in FigJam. To build the plugin JavaScript file run:
+
+```bash
+npm run build:figma
+```
+
+The compiled `code.js` along with `ui.html` is referenced in `manifest.json`. After building, you can load the plugin in Figma by choosing **Import Plugin from Manifest…** and selecting the `manifest.json` in this project.
 
 ## Learn More
 
